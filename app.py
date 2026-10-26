@@ -214,9 +214,9 @@ with tab1:
         st.markdown("<b style='color: #00FF87;'>🟢 หน่วยงานภายใน (EGAT)</b>", unsafe_allow_html=True)
         c_name_in, c_count_in = st.columns([0.7, 0.3])
         with c_name_in:
-            internal_name = st.text_input("ชื่อหน่วยงานภายใน / แผนก", value="แผนกบำรุงรักษาสถานีไฟฟ้า 2")
+            internal_name = st.text_input("ชื่อหน่วยงานภายใน / แผนก")
         with c_count_in:
-            internal_count = st.number_input("จำนวนคน (ภายใน)", min_value=1, value=5)
+            internal_count = st.number_input("จำนวนคน (ภายใน)", min_value=1, value=1)
             
         st.markdown("<b style='color: #FF9F43;'>🟡 หน่วยงานภายนอก (Outsource / ผู้รับเหมา)</b>", unsafe_allow_html=True)
         c_name_ext, c_count_ext = st.columns([0.7, 0.3])
