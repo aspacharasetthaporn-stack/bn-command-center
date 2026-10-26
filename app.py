@@ -55,7 +55,6 @@ st.markdown("""
         background-color: rgba(16, 185, 129, 0.15); border-left: 5px solid #10B981; padding: 12px; border-radius: 4px; margin-bottom: 15px;
     }
     
-    /* CSS ตกแต่ง Weather Card สไตล์เรียบหรูตามภาพตัวอย่าง */
     .weather-box {
         background: linear-gradient(135deg, #1E3A8A 0%, #0F172A 100%) !important;
         border-radius: 12px !important;
@@ -102,7 +101,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. ส่วนหัวระบบ (Header) สไตล์ริบบิ้นสีน้ำเงินตามแบบห้องควบคุม
 st.markdown("""
     <div style='text-align: center; background: linear-gradient(90deg, #0B1E36 0%, #1E3A8A 50%, #0B1E36 100%); 
                 padding: 12px; border-radius: 8px; border: 1px solid #00F2FE; margin-bottom: 25px; box-shadow: 0 0 15px rgba(0,242,254,0.2);'>
@@ -123,7 +121,6 @@ logo_base64 = get_base64_image(logo_file)
 if logo_base64:
     st.markdown(f"""<div style='text-align: center; margin-bottom: 20px;'><img src="data:image/png;base64,{logo_base64}" style="height: 80px; width: auto;"></div>""", unsafe_allow_html=True)
 
-# 🌐 ดึงข้อมูลสภาพอากาศแบบละเอียดครบถ้วน เจาะจงพิกัด สฟฟ.บางกอกน้อย
 @st.cache_data(ttl=300)
 def get_realtime_weather_advanced():
     try:
@@ -138,20 +135,18 @@ def get_realtime_weather_advanced():
         curr = res['current_weather']
         current_temp = curr['temperature']
         wind_speed = curr['windspeed']
-        prob_rain = res['daily']['precipitation_probability_max'][0]
+        prob_rain = res['daily']['precipitation_probability_max']
         
-        # รหัสพยากรณ์อากาศที่กรอกตัวเลขแบบครบถ้วนชัวร์ 100%
-        weather_code = curr.get('weathercode', 0)
-        status_text = "Clear Sky"
-        if weather_code in: 
-            status_text = "Partly Cloudy"
-        elif weather_code in: 
-            status_text = "Foggy"
-        elif weather_code in: 
+        # ปรับวิธีเช็กแบบใหม่ทั้งหมด ตัดคำว่า in ออก เพื่อเสถียรภาพสูงสุด 100%
+        w_code = int(curr.get('weathercode', 0))
+        status_text = "Partly Cloudy"
+        if w_code == 0:
+            status_text = "Clear Sky"
+        elif w_code > 50 and w_code < 70:
             status_text = "Rainy"
-        elif weather_code in: 
+        elif w_code >= 80:
             status_text = "Thunderstorm"
-        
+            
         return current_temp, prob_rain, humidity, wind_speed, pressure, status_text
     except: 
         return 24.0, 45, 62, 12.0, 1012, "Partly Cloudy"
@@ -168,8 +163,8 @@ with tab1:
     with col_left_side:
         st.markdown("<b style='color: #F59E0B; font-size: 1.1rem;'>┃ สภาพอากาศความเร็วสูงแบบเรียลไทม์ [LIVE]</b>", unsafe_allow_html=True)
         
-        weather_icon = "☀️"
-        if "Cloudy" in status_text: weather_icon = "⛅"
+        weather_icon = "⛅"
+        if "Clear" in status_text: weather_icon = "☀️"
         elif "Rain" in status_text: weather_icon = "🌧️"
         elif "Thunder" in status_text: weather_icon = "⛈️"
         
