@@ -237,7 +237,7 @@ with tab1:
 
         st.markdown("<div style='margin: 10px 0;'></div>", unsafe_allow_html=True)
         st.markdown("<b style='color: #F59E0B; font-size: 1.1rem;'>┃ รายงานอุบัติเหตุ & ความปลอดภัยประจำกะ (BN)</b>", unsafe_allow_html=True)
-        incident_input = st.text_area("บันทึกเหตุการณ์/การส่งมอบกะประจำวัน", value="09:30 น. รายงานการตรวจสอบระบบระบบป้องกันสายส่งสำเร็จ\n13:00 น. ไม่มีรายงานอุบัติเหตุจากการทำงาน")
+        incident_input = st.text_area("บันทึกเหตุการณ์/การส่งมอบกะประจำวัน")
         
         c_sel_date, c_sel_shift = st.columns(2)
         with c_sel_date: date_input = st.date_input("เลือกวันที่ส่งงาน", datetime.now())
