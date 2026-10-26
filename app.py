@@ -130,16 +130,17 @@ def get_realtime_weather_advanced():
         url = "https://open-meteo.com"
         res = requests.get(url).json()
         
-        # ดึงความชื้นและความกดอากาศล่าสุด
-        humidity = res.get('hourly', {}).get('relative_humidity_2m', [62])[0]
-        pressure = res.get('hourly', {}).get('surface_pressure', [1012])[0]
+        humidity_list = res.get('hourly', {}).get('relative_humidity_2m')
+        pressure_list = res.get('hourly', {}).get('surface_pressure')
+        humidity = humidity_list[-1] if humidity_list else 60
+        pressure = pressure_list[-1] if pressure_list else 1010
         
         curr = res['current_weather']
         current_temp = curr['temperature']
         wind_speed = curr['windspeed']
         prob_rain = res['daily']['precipitation_probability_max'][0]
         
-        # แก้ไขรหัสสภาพอากาศอ้างอิง WMO Code ให้สมบูรณ์ 100% ไร้จุดตกหล่น
+        # รหัสพยากรณ์อากาศที่กรอกตัวเลขแบบครบถ้วนชัวร์ 100%
         weather_code = curr.get('weathercode', 0)
         status_text = "Clear Sky"
         if weather_code in: 
@@ -158,10 +159,9 @@ def get_realtime_weather_advanced():
 temp, rain_chance, humidity, wind_speed, pressure, status_text = get_realtime_weather_advanced()
 tab1, tab2 = st.tabs(["🛸 CONTROL ROOM PANEL (หน้าหลักควบคุม)", "🗂️ DAILY SUMMARY & LOG HISTORIC (คลังรายงานประจำวัน)"])
 
-with tab2:
-    if not os.path.exists("shift_logs.csv"):
-        df_init = pd.DataFrame(columns=["Timestamp", "Date", "Shift", "Internal_Name", "Staff_Count", "External_Name", "Ext_Count", "Weather_Temp", "Rain_Chance", "Water_Level", "Incidents"])
-        df_init.to_csv("shift_logs.csv", index=False, encoding='utf-8-sig')
+if not os.path.exists("shift_logs.csv"):
+    df_init = pd.DataFrame(columns=["Timestamp", "Date", "Shift", "Internal_Name", "Staff_Count", "External_Name", "Ext_Count", "Weather_Temp", "Rain_Chance", "Water_Level", "Incidents"])
+    df_init.to_csv("shift_logs.csv", index=False, encoding='utf-8-sig')
 with tab1:
     col_left_side, col_right_side = st.columns([1.0, 1.0])
     
@@ -178,20 +178,10 @@ with tab1:
                 <div style="font-size: 5rem; margin-bottom: -10px;">{weather_icon}</div>
                 <div class="weather-main-temp">{int(temp)}°C</div>
                 <div class="weather-status-text">{status_text}</div>
-                
                 <div class="weather-sub-grid">
-                    <div class="weather-sub-item">
-                        💧 Humidity
-                        <div class="weather-sub-value">{humidity}%</div>
-                    </div>
-                    <div class="weather-sub-item">
-                        💨 Wind Speed
-                        <div class="weather-sub-value">{int(wind_speed)} km/h</div>
-                    </div>
-                    <div class="weather-sub-item">
-                        🧭 Pressure
-                        <div class="weather-sub-value">{int(pressure)} hPa</div>
-                    </div>
+                    <div class="weather-sub-item">💧 Humidity<div class="weather-sub-value">{humidity}%</div></div>
+                    <div class="weather-sub-item">💨 Wind Speed<div class="weather-sub-value">{int(wind_speed)} km/h</div></div>
+                    <div class="weather-sub-item">🧭 Pressure<div class="weather-sub-value">{int(pressure)} hPa</div></div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -201,7 +191,7 @@ with tab1:
         if rain_chance >= 60:
             st.markdown(f"""
                 <div class="risk-banner-critical">
-                    <b style="color: #EF4444; font-size: 1.05rem;">⚠️ แจ้งเตือนระดับสูง (High Risk ฝฝนตกหนัก)</b><br>
+                    <b style="color: #EF4444; font-size: 1.05rem;">⚠️ แจ้งเตือนระดับสูง (High Risk ฝนตกหนัก)</b><br>
                     <span style="color: #E2E8F0; font-size: 0.9rem;">⚡ โอกาสเกิดฝนฟ้าคะนองวันนี้สูงถึง <b>{rain_chance}%</b> เฝ้าระวังน้ำท่วมขังฐานอุปกรณ์ลานไกอย่างใกล้ชิด</span>
                 </div>
             """, unsafe_allow_html=True)
@@ -221,7 +211,7 @@ with tab1:
             st.info("💡 ไม่พบไฟล์รูปภาพ 'bn_aerial.png' ในโฟลเดอร์คลาวด์")
 
     with col_right_side:
-        st.markdown("<b style='color: #F59E0B; font-size: 1.1rem;'>┃ สถานะการปฏิบัติงานของหน่วยงาน & ค่าตรวจวัด</b>", unsafe_allow_html=True)
+        st.markdown("<b style='color: #F59E0B; font-size: 1.1rem;'>┃ Status การปฏิบัติงานของหน่วยงาน & ค่าตรวจวัด</b>", unsafe_allow_html=True)
         
         st.markdown("<b style='color: #00FF87;'>🟢 หน่วยงานภายใน (EGAT)</b>", unsafe_allow_html=True)
         c_name_in, c_count_in = st.columns([0.7, 0.3])
