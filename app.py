@@ -102,7 +102,7 @@ st.markdown("""
     <div style='text-align: center; background: linear-gradient(90deg, #0B1E36 0%, #1E3A8A 50%, #0B1E36 100%); 
                 padding: 12px; border-radius: 8px; border: 1px solid #00F2FE; margin-bottom: 25px; box-shadow: 0 0 15px rgba(0,242,254,0.2);'>
         <h2 style='color: #FFFFFF; margin: 0; font-size: 1.8rem; letter-spacing: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);'>
-            ⚡ สถานีไฟฟ้าแรงสูงบางกอกน้อย [BN] - ระบบบริหารความเสี่ยงและสภาพอากาศ
+            สถานีไฟฟ้าแรงสูงบางกอกน้อย [BN] - ระบบบริหารความเสี่ยงและสภาพอากาศ
         </h2>
     </div>
 """, unsafe_allow_html=True)
@@ -150,7 +150,7 @@ def get_realtime_weather_advanced():
 temp, rain_chance, humidity, wind_speed, pressure, status_text = get_realtime_weather_advanced()
 tab1, tab2 = st.tabs(["🛸 CONTROL ROOM PANEL (หน้าหลักควบคุม)", "🗂️ DAILY SUMMARY & LOG HISTORIC (คลังรายงานประจำวัน)"])
 
-ALL_COLS = ["Timestamp", "Date", "Shift", "Internal_Name", "Staff_Count", "External_Name", "Ext_Count", "Maid_Count", "Guard_Count", "Weather_Temp", "Rain_Chance", "Water_Level", "Incidents"]
+ALL_COLS = ["Timestamp", "Date", "Shift", "Shift_Staff_Count", "Internal_Name", "Staff_Count", "External_Name", "Ext_Count", "Maid_Count", "Guard_Count", "Weather_Temp", "Rain_Chance", "Water_Level", "Incidents"]
 
 if not os.path.exists("shift_logs.csv"):
     df_init = pd.DataFrame(columns=ALL_COLS)
@@ -196,7 +196,7 @@ with tab1:
                 </div>
             """, unsafe_allow_html=True)
             
-        st.markdown("<b style='color: #F59E0B; font-size: 1.1rem;'>┃ภาพถ่ายทางอากาศแผนผังพื้นที่ลานไก สฟฟ.บางกอกน้อย [BN]</b>", unsafe_allow_html=True)
+        st.markdown("<b style='color: #F59E0B; font-size: 1.1rem;'>┃ภาพถ่ายทางอากาศแผนผังพื้นที่ลานไก สฟ.บางกอกน้อย [BN]</b>", unsafe_allow_html=True)
         aerial_image_path = "bn_aerial.png"
         if os.path.exists(aerial_image_path):
             st.image(Image.open(aerial_image_path), use_container_width=True, caption="📷 พิกัดพื้นที่ตรวจวัดความเสี่ยงลานไกไฟฟ้าแรงสูง (Switchyard)")
@@ -207,11 +207,13 @@ with tab1:
         st.markdown("<b style='color: #F59E0B; font-size: 1.1rem;'>┃ สถานะการปฏิบัติงานของหน่วยงาน & ค่าตรวจวัด</b>", unsafe_allow_html=True)
         
         st.markdown("<b style='color: #00FF87;'>🟢 หน่วยงานภายใน (EGAT)</b>", unsafe_allow_html=True)
+        shift_staff_count = st.number_input("⚡ จำนวนพนักงานกะ (คน)", min_value=1, value=2)
+        
         c_name_in, c_count_in = st.columns([0.7, 0.3])
         with c_name_in:
-            internal_name = st.text_input("ชื่อหน่วยงานภายใน / แผนก", value="แผนกบำรุงรักษาสถานีไฟฟ้า 2")
+            internal_name = st.text_input("ชื่อหน่วยงานภายในอื่น / แผนก", value="แผนกบำรุงรักษาสถานีไฟฟ้า 2")
         with c_count_in:
-            internal_count = st.number_input("จำนวนคน (ภายใน)", min_value=1, value=5)
+            internal_count = st.number_input("จำนวนคน (ภายในอื่น)", min_value=0, value=3)
             
         st.markdown("<b style='color: #FF9F43;'>🟡 หน่วยงานภายนอก (Outsource / ผู้รับเหมา)</b>", unsafe_allow_html=True)
         c_name_ext, c_count_ext = st.columns([0.7, 0.3])
@@ -220,7 +222,6 @@ with tab1:
         with c_count_ext:
             external_count = st.number_input("จำนวนคน (ภายนอก)", min_value=0, value=0)
 
-        # ส่วนกรอกจำนวน แม่บ้าน และ รปภ. แยกกันชัดเจน
         st.markdown("<b style='color: #38BDF8;'>🔵 เจ้าหน้าที่บริการและรักษาความปลอดภัยประจำสถานี</b>", unsafe_allow_html=True)
         c_maid, c_guard = st.columns(2)
         with c_maid:
@@ -251,6 +252,7 @@ with tab1:
                 "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "Date": date_input.strftime("%Y-%m-%d"),
                 "Shift": shift_input,
+                "Shift_Staff_Count": int(shift_staff_count),
                 "Internal_Name": internal_name,
                 "Staff_Count": int(internal_count),
                 "External_Name": external_name if external_count > 0 else "ไม่มี",
@@ -284,12 +286,18 @@ with tab2:
                 log_df = log_df[log_df["Timestamp"].notna()]
                 latest_row = log_df.iloc[-1].fillna(0)
                 
-                total_people = int(latest_row['Staff_Count'] + latest_row['Ext_Count'] + latest_row['Maid_Count'] + latest_row['Guard_Count'])
+                total_people = int(
+                    latest_row['Shift_Staff_Count'] + 
+                    latest_row['Staff_Count'] + 
+                    latest_row['Ext_Count'] + 
+                    latest_row['Maid_Count'] + 
+                    latest_row['Guard_Count']
+                )
                 
                 kpi_1, kpi_2, kpi_3 = st.columns(3)
                 with kpi_1: 
                     st.metric(label="👥 ยอดรวมคนทั้งหมดในสถานี", value=f"{total_people} คน")
-                    st.caption(f"กฟผ.: {int(latest_row['Staff_Count'])} | ภายนอก: {int(latest_row['Ext_Count'])} | แม่บ้าน: {int(latest_row['Maid_Count'])} | รปภ.: {int(latest_row['Guard_Count'])}")
+                    st.caption(f"กะ: {int(latest_row['Shift_Staff_Count'])} | ภายในอื่น: {int(latest_row['Staff_Count'])} | ภายนอก: {int(latest_row['Ext_Count'])} | แม่บ้าน: {int(latest_row['Maid_Count'])} | รปภ.: {int(latest_row['Guard_Count'])}")
                 with kpi_2: 
                     st.metric(label="🌧️ โอกาสเกิดฝนล่าสุด", value=f"{int(latest_row['Rain_Chance'])} %")
                 with kpi_3: 
