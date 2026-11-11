@@ -122,19 +122,19 @@ if logo_base64:
 def get_realtime_weather_advanced():
     try:
         url = "https://open-meteo.com"
-        res = requests.get(url).json()
+        res = requests.get(url, timeout=10).json()
         
-        humidity_list = res.get('hourly', {}).get('relative_humidity_2m',)
-        pressure_list = res.get('hourly', {}).get('surface_pressure',)
-        humidity = humidity_list[-1]
-        pressure = pressure_list[-1]
+        curr = res['current']
+        current_temp = curr['temperature_2m']
+        humidity = curr['relative_humidity_2m']
+        pressure = curr['surface_pressure']
+        wind_speed = curr['wind_speed_10m']
+        w_code = int(curr['weather_code'])
         
-        curr = res['current_weather']
-        current_temp = curr['temperature']
-        wind_speed = curr['windspeed']
-        prob_rain = res['daily']['precipitation_probability_max']
+        # ดึงค่าโอกาสเกิดฝนสูงสุดของ "วันนี้" (ลำดับที่ 0 ของรายการ)
+        rain_list = res['daily']['precipitation_probability_max']
+        prob_rain = int(rain_list[0]) if isinstance(rain_list, list) and len(rain_list) > 0 else 0
         
-        w_code = int(curr.get('weathercode', 0))
         status_text = "มีเมฆบางส่วน (Partly Cloudy)"
         if w_code == 0:
             status_text = "ท้องฟ้าแจ่มใส (Clear Sky)"
@@ -145,7 +145,7 @@ def get_realtime_weather_advanced():
             
         return current_temp, prob_rain, humidity, wind_speed, pressure, status_text
     except: 
-        return 32.5, 40, 65, 10.5, 1009, "มีเมฆบางส่วน (Partly Cloudy)"
+        return 32.0, 0, 60, 10.0, 1010, "ท้องฟ้าแจ่มใส (Clear Sky)"
 
 temp, rain_chance, humidity, wind_speed, pressure, status_text = get_realtime_weather_advanced()
 tab1, tab2 = st.tabs(["🛸 CONTROL ROOM PANEL (หน้าหลักควบคุม)", "🗂️ DAILY SUMMARY & LOG HISTORIC (คลังรายงานประจำวัน)"])
@@ -169,12 +169,12 @@ with tab1:
         st.markdown(f"""
             <div class="weather-box">
                 <div style="font-size: 5rem; margin-bottom: -10px;">{weather_icon}</div>
-                <div class="weather-main-temp">{int(temp)}°C</div>
+                <div class="weather-main-temp">{int(round(temp))}°C</div>
                 <div class="weather-status-text">{status_text}</div>
                 <div class="weather-sub-grid">
-                    <div class="weather-sub-item">💧 ความชื้น (Humidity)<div class="weather-sub-value">{humidity}%</div></div>
-                    <div class="weather-sub-item">💨 ความเร็วลม (Wind)<div class="weather-sub-value">{int(wind_speed)} km/h</div></div>
-                    <div class="weather-sub-item">🧭 ความกดอากาศ<div class="weather-sub-value">{int(pressure)} hPa</div></div>
+                    <div class="weather-sub-item">💧 ความชื้น (Humidity)<div class="weather-sub-value">{int(humidity)}%</div></div>
+                    <div class="weather-sub-item">💨 ความเร็วลม (Wind)<div class="weather-sub-value">{int(round(wind_speed))} km/h</div></div>
+                    <div class="weather-sub-item">🧭 ความกดอากาศ<div class="weather-sub-value">{int(round(pressure))} hPa</div></div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -192,7 +192,7 @@ with tab1:
             st.markdown(f"""
                 <div class="risk-banner-normal">
                     <b style="color: #10B981;">✅ สภาวะอากาศปกติ (Normal Risk)</b><br>
-                    <span style="color: #E2E8F0; font-size: 0.9rem;">สภาวะอากาศปกติ มีโอกาสเกิดฝนเพียง <b>{rain_chance}%</b> ไม่มีความเสี่ยงพายุฝนฟ้าคะนองรุนแรง</span>
+                    <span style="color: #E2E8F0; font-size: 0.9rem;">สภาวะอากาศปกติ โอกาสเกิดฝนวันนี้ <b>{rain_chance}%</b> ไม่มีความเสี่ยงพายุฝนฟ้าคะนองรุนแรง</span>
                 </div>
             """, unsafe_allow_html=True)
             
@@ -307,4 +307,4 @@ with tab2:
             else:
                 st.info("ฐานข้อมูลยังไม่มีรายงานบันทึกเข้ามาจากกะของสถานี BN ครับ")
         except:
-            st.info("ระบบกำลังประมวลผลฐานข้อมูลตารางคอลัมน์ใหม่ กรุณากดบันทึกข้อมูลกะแรกที่หน้า OPERATIONS CENTER ก่อนครับ")
+            st.info("ระบบกำลังประมวลผลฐานข้อมูลตารางคอลัมน์ใหม่ กรุณากดบันทึกข้อมูลกะแรกที่หน้า CONTROL ROOM PANEL ก่อนครับ")
