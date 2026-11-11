@@ -8,6 +8,11 @@ from PIL import Image
 
 st.set_page_config(page_title="BN Smart Command Center", layout="wide", initial_sidebar_state="collapsed")
 
+# 🔗 ลิงก์เชื่อมต่อ Google Sheets และ Web App ของคุณ
+GOOGLE_SHEET_CSV_URL = "https://google.com"
+GOOGLE_SHEET_VIEW_URL = "https://google.com"
+WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxZPJDRKoIIt-i8ntpRg3NC1wDd_dlVxBXgmaSFb3bDu5UitRUXk4KteUJT4xL_89C5/exec"
+
 st.markdown("""
     <style>
     .stApp {
@@ -131,7 +136,6 @@ def get_realtime_weather_advanced():
         wind_speed = float(curr['wind_speed_10m'])
         w_code = int(curr['weather_code'])
         
-        # แก้บั๊กดึงค่าลำดับที่ 0 ของรายการพยากรณ์ฝนรายวันให้ถูกต้อง
         rain_list = res.get('daily', {}).get('precipitation_probability_max', [])
         prob_rain = int(rain_list[0]) if len(rain_list) > 0 and rain_list[0] is not None else 0
         
@@ -151,10 +155,6 @@ temp, rain_chance, humidity, wind_speed, pressure, status_text, is_live = get_re
 tab1, tab2 = st.tabs(["🛸 CONTROL ROOM PANEL (หน้าหลักควบคุม)", "🗂️ DAILY SUMMARY & LOG HISTORIC (คลังรายงานประจำวัน)"])
 
 ALL_COLS = ["Timestamp", "Date", "Shift", "Shift_Staff_Count", "Internal_Name", "Staff_Count", "External_Name", "Ext_Count", "Maid_Count", "Guard_Count", "Weather_Temp", "Rain_Chance", "Water_Level", "Incidents"]
-
-if not os.path.exists("shift_logs.csv"):
-    df_init = pd.DataFrame(columns=ALL_COLS)
-    df_init.to_csv("shift_logs.csv", index=False, encoding='utf-8-sig')
 with tab1:
     col_left_side, col_right_side = st.columns([1.0, 1.0])
     
@@ -267,47 +267,60 @@ with tab1:
                 "Water_Level": int(water_lvl),
                 "Incidents": incident_input.replace("\n", " | ") if incident_input.strip() != "" else "ปกติ"
             }
-            if os.path.exists("shift_logs.csv"):
+            
+            with st.spinner("กำลังบันทึกข้อมูลลง Google Sheets ถาวร..."):
                 try:
-                    df = pd.read_csv("shift_logs.csv")
-                    df = df.reindex(columns=ALL_COLS)
-                    df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
-                except:
-                    df = pd.DataFrame([new_data])
-            else:
-                df = pd.DataFrame([new_data])
-            df.to_csv("shift_logs.csv", index=False, encoding='utf-8-sig')
-            st.success("บันทึกรายงานเหตุการณ์สถานีบางกอกน้อยเรียบร้อย!")
+                    res = requests.post(WEB_APP_URL, json=new_data, timeout=15)
+                    if res.status_code == 200:
+                        st.success("✅ บันทึกข้อมูลเข้า Google Sheets ถาวรเรียบร้อยแล้ว!")
+                    else:
+                        st.error("เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง")
+                except Exception as e:
+                    st.error(f"ไม่สามารถเชื่อมต่อ Google Sheets ได้: {e}")
 
 with tab2:
-    st.markdown("<h3 style='color: #00F2FE;'>📜 คลังข้อมูลรายงานประจำวัน สถานีบางกอกน้อย</h3>", unsafe_allow_html=True)
-    if os.path.exists("shift_logs.csv"):
-        try:
-            log_df = pd.read_csv("shift_logs.csv", encoding='utf-8-sig')
+    st.markdown("<h3 style='color: #00F2FE;'>📜 คลังข้อมูลรายงานประจำวัน สถานีไฟฟ้าเเรงสูงบางกอกน้อย (Google Sheets)</h3>", unsafe_allow_html=True)
+    
+    c_ref, c_link = st.columns([0.3, 0.7])
+    with c_ref:
+        if st.button("🔄 รีเฟรชข้อมูลล่าสุด"):
+            st.rerun()
+    with c_link:
+        st.markdown(f"<div style='padding-top: 8px;'><a href='{GOOGLE_SHEET_VIEW_URL}' target='_blank' style='color: #00F2FE; font-weight: bold;'>📂 คลิกเพื่อเปิดดูไฟล์ Google Sheets ตัวเต็ม ↗</a></div>", unsafe_allow_html=True)
+
+    try:
+        # ดึงข้อมูลย้อนหลังทั้งหมดจาก Google Sheets แบบเรียลไทม์
+        cache_buster = datetime.now().strftime("%Y%m%d%H%M%S")
+        log_df = pd.read_csv(f"{GOOGLE_SHEET_CSV_URL}&t={cache_buster}")
+        
+        if not log_df.empty and "Timestamp" in log_df.columns:
+            log_df = log_df[log_df["Timestamp"].notna()]
             if not log_df.empty:
-                log_df = log_df.reindex(columns=ALL_COLS)
-                log_df = log_df[log_df["Timestamp"].notna()]
                 latest_row = log_df.iloc[-1].fillna(0)
                 
                 total_people = int(
-                    latest_row['Shift_Staff_Count'] + 
-                    latest_row['Staff_Count'] + 
-                    latest_row['Ext_Count'] + 
-                    latest_row['Maid_Count'] + 
-                    latest_row['Guard_Count']
+                    float(latest_row.get('Shift_Staff_Count', 0)) + 
+                    float(latest_row.get('Staff_Count', 0)) + 
+                    float(latest_row.get('Ext_Count', 0)) + 
+                    float(latest_row.get('Maid_Count', 0)) + 
+                    float(latest_row.get('Guard_Count', 0))
                 )
                 
                 kpi_1, kpi_2, kpi_3 = st.columns(3)
                 with kpi_1: 
                     st.metric(label="👥 ยอดรวมคนทั้งหมดในสถานี", value=f"{total_people} คน")
-                    st.caption(f"กะ: {int(latest_row['Shift_Staff_Count'])} | ภายในอื่น: {int(latest_row['Staff_Count'])} | ภายนอก: {int(latest_row['Ext_Count'])} | แม่บ้าน: {int(latest_row['Maid_Count'])} | รปภ.: {int(latest_row['Guard_Count'])}")
+                    st.caption(f"กะ: {int(latest_row.get('Shift_Staff_Count', 0))} | ภายในอื่น: {int(latest_row.get('Staff_Count', 0))} | ภายนอก: {int(latest_row.get('Ext_Count', 0))} | แม่บ้าน: {int(latest_row.get('Maid_Count', 0))} | รปภ.: {int(latest_row.get('Guard_Count', 0))}")
                 with kpi_2: 
-                    st.metric(label="🌧️ โอกาสเกิดฝนล่าสุด", value=f"{int(latest_row['Rain_Chance'])} %")
+                    st.metric(label="🌧️ โอกาสเกิดฝนล่าสุด", value=f"{int(latest_row.get('Rain_Chance', 0))} %")
                 with kpi_3: 
-                    st.metric(label="🌊 ระดับน้ำบ่อระบายกะล่าสุด", value=f"{int(latest_row['Water_Level'])} %")
+                    st.metric(label="🌊 ระดับน้ำบ่อระบายกะล่าสุด", value=f"{int(latest_row.get('Water_Level', 0))} %")
                 st.markdown("<br>", unsafe_allow_html=True)
-                st.dataframe(log_df, use_container_width=True)
+                
+                # แสดงตารางเรียงจากข้อมูลล่าสุดอยู่บนสุด
+                st.dataframe(log_df.iloc[::-1], use_container_width=True)
             else:
-                st.info("ฐานข้อมูลยังไม่มีรายงานบันทึกเข้ามาจากกะของสถานี BN ครับ")
-        except:
-            st.info("ระบบกำลังประมวลผลฐานข้อมูลตารางคอลัมน์ใหม่ กรุณากดบันทึกข้อมูลกะแรกที่หน้า CONTROL ROOM PANEL ก่อนครับ")
+                st.info("ยังไม่มีข้อมูลบันทึกใน Google Sheets กรุณาทดลองบันทึกข้อมูลชุดแรกที่หน้า CONTROL ROOM PANEL ครับ")
+        else:
+            st.info("ยังไม่มีข้อมูลบันทึกใน Google Sheets กรุณาทดลองบันทึกข้อมูลชุดแรกที่หน้า CONTROL ROOM PANEL ครับ")
+    except Exception as e:
+        st.warning("กำลังรอข้อมูลชุดแรกจาก Google Sheets (กรุณาทดลองกดบันทึกข้อมูลที่หน้าแรกก่อนครับ)")
