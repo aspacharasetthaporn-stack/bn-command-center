@@ -61,7 +61,7 @@ st.markdown("""
         box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.2);
     }
     .weather-main-temp {
-        font-size: 4.5rem !important;
+        font-size: 4.2rem !important;
         font-weight: 800 !important;
         color: #FFFFFF !important;
         line-height: 1;
@@ -118,22 +118,22 @@ logo_base64 = get_base64_image(logo_file)
 if logo_base64:
     st.markdown(f"""<div style='text-align: center; margin-bottom: 20px;'><img src="data:image/png;base64,{logo_base64}" style="height: 80px; width: auto;"></div>""", unsafe_allow_html=True)
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=60)
 def get_realtime_weather_advanced():
     try:
         url = "https://open-meteo.com"
         res = requests.get(url, timeout=10).json()
         
         curr = res['current']
-        current_temp = curr['temperature_2m']
-        humidity = curr['relative_humidity_2m']
-        pressure = curr['surface_pressure']
-        wind_speed = curr['wind_speed_10m']
+        current_temp = float(curr['temperature_2m'])
+        humidity = int(curr['relative_humidity_2m'])
+        pressure = int(round(curr['surface_pressure']))
+        wind_speed = float(curr['wind_speed_10m'])
         w_code = int(curr['weather_code'])
         
-        # ดึงค่าโอกาสเกิดฝนสูงสุดของ "วันนี้" (ลำดับที่ 0 ของรายการ)
-        rain_list = res['daily']['precipitation_probability_max']
-        prob_rain = int(rain_list[0]) if isinstance(rain_list, list) and len(rain_list) > 0 else 0
+        # แก้บั๊กดึงค่าลำดับที่ 0 ของรายการพยากรณ์ฝนรายวันให้ถูกต้อง
+        rain_list = res.get('daily', {}).get('precipitation_probability_max', [])
+        prob_rain = int(rain_list[0]) if len(rain_list) > 0 and rain_list[0] is not None else 0
         
         status_text = "มีเมฆบางส่วน (Partly Cloudy)"
         if w_code == 0:
@@ -143,11 +143,11 @@ def get_realtime_weather_advanced():
         elif w_code >= 80:
             status_text = "พายุฝนฟ้าคะนอง (Thunderstorm)"
             
-        return current_temp, prob_rain, humidity, wind_speed, pressure, status_text
+        return current_temp, prob_rain, humidity, wind_speed, pressure, status_text, True
     except: 
-        return 32.0, 0, 60, 10.0, 1010, "ท้องฟ้าแจ่มใส (Clear Sky)"
+        return 30.0, 0, 60, 10.0, 1010, "กำลังเชื่อมต่อข้อมูลอากาศ...", False
 
-temp, rain_chance, humidity, wind_speed, pressure, status_text = get_realtime_weather_advanced()
+temp, rain_chance, humidity, wind_speed, pressure, status_text, is_live = get_realtime_weather_advanced()
 tab1, tab2 = st.tabs(["🛸 CONTROL ROOM PANEL (หน้าหลักควบคุม)", "🗂️ DAILY SUMMARY & LOG HISTORIC (คลังรายงานประจำวัน)"])
 
 ALL_COLS = ["Timestamp", "Date", "Shift", "Shift_Staff_Count", "Internal_Name", "Staff_Count", "External_Name", "Ext_Count", "Maid_Count", "Guard_Count", "Weather_Temp", "Rain_Chance", "Water_Level", "Incidents"]
@@ -166,15 +166,18 @@ with tab1:
         elif "Rain" in status_text: weather_icon = "🌧️"
         elif "Thunder" in status_text: weather_icon = "⛈️"
         
+        live_badge = "🟢 เชื่อมต่อดาวเทียมสำเร็จ (พิกัดหลักสอง)" if is_live else "🟡 กำลังดึงข้อมูลสำรอง"
+        
         st.markdown(f"""
             <div class="weather-box">
-                <div style="font-size: 5rem; margin-bottom: -10px;">{weather_icon}</div>
-                <div class="weather-main-temp">{int(round(temp))}°C</div>
+                <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 5px;">{live_badge}</div>
+                <div style="font-size: 4.5rem; margin-bottom: -10px;">{weather_icon}</div>
+                <div class="weather-main-temp">{temp:.1f}°C</div>
                 <div class="weather-status-text">{status_text}</div>
                 <div class="weather-sub-grid">
-                    <div class="weather-sub-item">💧 ความชื้น (Humidity)<div class="weather-sub-value">{int(humidity)}%</div></div>
-                    <div class="weather-sub-item">💨 ความเร็วลม (Wind)<div class="weather-sub-value">{int(round(wind_speed))} km/h</div></div>
-                    <div class="weather-sub-item">🧭 ความกดอากาศ<div class="weather-sub-value">{int(round(pressure))} hPa</div></div>
+                    <div class="weather-sub-item">💧 ความชื้น (Humidity)<div class="weather-sub-value">{humidity}%</div></div>
+                    <div class="weather-sub-item">💨 ความเร็วลม (Wind)<div class="weather-sub-value">{wind_speed:.1f} km/h</div></div>
+                    <div class="weather-sub-item">🧭 ความกดอากาศ<div class="weather-sub-value">{pressure} hPa</div></div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
