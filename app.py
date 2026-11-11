@@ -124,15 +124,15 @@ def get_realtime_weather_advanced():
         url = "https://open-meteo.com"
         res = requests.get(url).json()
         
-        humidity_list = res.get('hourly', {}).get('relative_humidity_2m', [60])
-        pressure_list = res.get('hourly', {}).get('surface_pressure', [1010])
+        humidity_list = res.get('hourly', {}).get('relative_humidity_2m',)
+        pressure_list = res.get('hourly', {}).get('surface_pressure',)
         humidity = humidity_list[-1]
         pressure = pressure_list[-1]
         
         curr = res['current_weather']
         current_temp = curr['temperature']
         wind_speed = curr['windspeed']
-        prob_rain = res['daily']['precipitation_probability_max'][0]
+        prob_rain = res['daily']['precipitation_probability_max']
         
         w_code = int(curr.get('weathercode', 0))
         status_text = "มีเมฆบางส่วน (Partly Cloudy)"
@@ -211,14 +211,14 @@ with tab1:
         
         c_name_in, c_count_in = st.columns([0.7, 0.3])
         with c_name_in:
-            internal_name = st.text_input("ชื่อหน่วยงานภายในอื่น / แผนก", value="แผนกบำรุงรักษาสถานีไฟฟ้า 2")
+            internal_name = st.text_input("ชื่อหน่วยงานภายในอื่น / แผนก", value="")
         with c_count_in:
-            internal_count = st.number_input("จำนวนคน (ภายในอื่น)", min_value=0, value=3)
+            internal_count = st.number_input("จำนวนคน (ภายในอื่น)", min_value=0, value=0)
             
         st.markdown("<b style='color: #FF9F43;'>🟡 หน่วยงานภายนอก (Outsource / ผู้รับเหมา)</b>", unsafe_allow_html=True)
         c_name_ext, c_count_ext = st.columns([0.7, 0.3])
         with c_name_ext:
-            external_name = st.text_input("ชื่อหน่วยงานภายนอก / บริษัท", placeholder="เช่น บริษัท เอ บี ซี จำกัด / ไม่มี")
+            external_name = st.text_input("ชื่อหน่วยงานภายนอก / บริษัท", value="")
         with c_count_ext:
             external_count = st.number_input("จำนวนคน (ภายนอก)", min_value=0, value=0)
 
@@ -241,7 +241,7 @@ with tab1:
 
         st.markdown("<div style='margin: 10px 0;'></div>", unsafe_allow_html=True)
         st.markdown("<b style='color: #F59E0B; font-size: 1.1rem;'>┃ รายงานอุบัติเหตุ & ความปลอดภัยประจำกะ (BN)</b>", unsafe_allow_html=True)
-        incident_input = st.text_area("บันทึกเหตุการณ์/การส่งมอบกะประจำวัน", value="09:30 น. รายงานการตรวจสอบระบบป้องกันสายส่งสำเร็จ\n13:00 น. ไม่มีรายงานอุบัติเหตุจากการทำงาน")
+        incident_input = st.text_area("บันทึกเหตุการณ์/การส่งมอบกะประจำวัน", value="")
         
         c_sel_date, c_sel_shift = st.columns(2)
         with c_sel_date: date_input = st.date_input("เลือกวันที่ส่งงาน", datetime.now())
@@ -253,16 +253,16 @@ with tab1:
                 "Date": date_input.strftime("%Y-%m-%d"),
                 "Shift": shift_input,
                 "Shift_Staff_Count": int(shift_staff_count),
-                "Internal_Name": internal_name,
+                "Internal_Name": internal_name if internal_name.strip() != "" else "ไม่มี",
                 "Staff_Count": int(internal_count),
-                "External_Name": external_name if external_count > 0 else "ไม่มี",
+                "External_Name": external_name if external_name.strip() != "" else "ไม่มี",
                 "Ext_Count": int(external_count),
                 "Maid_Count": int(maid_count),
                 "Guard_Count": int(guard_count),
                 "Weather_Temp": temp,
                 "Rain_Chance": int(rain_chance),
                 "Water_Level": int(water_lvl),
-                "Incidents": incident_input.replace("\n", " | ")
+                "Incidents": incident_input.replace("\n", " | ") if incident_input.strip() != "" else "ปกติ"
             }
             if os.path.exists("shift_logs.csv"):
                 try:
@@ -307,4 +307,4 @@ with tab2:
             else:
                 st.info("ฐานข้อมูลยังไม่มีรายงานบันทึกเข้ามาจากกะของสถานี BN ครับ")
         except:
-            st.info("ระบบกำลังประมวลผลฐานข้อมูลตารางคอลัมน์ใหม่ กรุณากดบันทึกข้อมูลกะแรกที่หน้า CONTROL ROOM PANEL ก่อนครับ")
+            st.info("ระบบกำลังประมวลผลฐานข้อมูลตารางคอลัมน์ใหม่ กรุณากดบันทึกข้อมูลกะแรกที่หน้า OPERATIONS CENTER ก่อนครับ")
